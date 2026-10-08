@@ -1,0 +1,682 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Video Dubbing Studio</title>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&family=JetBrains+Mono:wght@700&display=swap"
+        rel="stylesheet">
+    <style>
+        :root {
+            --sand: #F5E6CA;
+            --cobalt: #0047AB;
+            --cobalt-dark: #002D6E;
+            --bg-color: #F5E6CA;
+            --card-bg: rgba(255, 255, 255, 0.85);
+            --text: #002D6E;
+            --text-muted: #4B6B94;
+            --border: rgba(0, 71, 171, 0.18);
+            --danger: #ef4444;
+            --success: #059669;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text);
+            min-height: 100vh;
+            padding: 2rem 1rem;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 1050px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        header h1 {
+            font-size: 2.3rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, #002D6E, #0047AB);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        header p {
+            color: var(--text-muted);
+            margin-top: 0.5rem;
+            font-weight: 500;
+        }
+
+        .card {
+            background: var(--card-bg);
+            backdrop-filter: blur(16px);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 1.75rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 10px 30px rgba(0, 45, 110, 0.08);
+        }
+
+        .tabs {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .tab-btn {
+            flex: 1;
+            padding: 0.8rem;
+            background: rgba(0, 71, 171, 0.06);
+            border: 1px solid var(--border);
+            color: var(--cobalt-dark);
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 700;
+            transition: all 0.25s;
+        }
+
+        .tab-btn.active {
+            background: var(--cobalt);
+            border-color: var(--cobalt-dark);
+            color: #FFFFFF;
+            box-shadow: 0 4px 15px rgba(0, 71, 171, 0.3);
+        }
+
+        .dropzone {
+            border: 2px dashed rgba(0, 71, 171, 0.35);
+            border-radius: 12px;
+            padding: 2.5rem 1rem;
+            text-align: center;
+            cursor: pointer;
+            background: rgba(255, 255, 255, 0.6);
+            transition: all 0.25s;
+        }
+
+        .dropzone:hover {
+            background: rgba(255, 255, 255, 0.95);
+            border-color: var(--cobalt);
+        }
+
+        .studio-grid {
+            display: none;
+            grid-template-columns: 1.2fr 0.8fr;
+            gap: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        @media (max-width: 800px) {
+            .studio-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .camera-box {
+            position: relative;
+            border-radius: 12px;
+            overflow: hidden;
+            background: #000;
+            aspect-ratio: 16/9;
+        }
+
+        #webcam-preview {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .rec-badge {
+            position: absolute;
+            top: 12px;
+            left: 12px;
+            background: rgba(239, 68, 68, 0.9);
+            color: white;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 700;
+            display: none;
+            align-items: center;
+            gap: 6px;
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.4;
+            }
+
+            100% {
+                opacity: 1;
+            }
+        }
+
+        .telemetry-box {
+            background: rgba(255, 255, 255, 0.9);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1.25rem;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .timer-display {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 2.2rem;
+            font-weight: 700;
+            color: var(--cobalt-dark);
+            text-align: center;
+            margin: 0.5rem 0;
+        }
+
+        .vu-container {
+            margin: 1rem 0;
+        }
+
+        .vu-label {
+            font-size: 0.85rem;
+            font-weight: 600;
+            margin-bottom: 0.35rem;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .vu-bar-bg {
+            width: 100%;
+            height: 12px;
+            background: rgba(0, 71, 171, 0.1);
+            border-radius: 6px;
+            overflow: hidden;
+        }
+
+        .vu-bar-fill {
+            width: 0%;
+            height: 100%;
+            background: linear-gradient(90deg, #10b981, #f59e0b, #ef4444);
+            transition: width 0.08s ease-out;
+            border-radius: 6px;
+        }
+
+        .btn-rec {
+            padding: 0.85rem;
+            border: none;
+            border-radius: 8px;
+            font-weight: 700;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .btn-start {
+            background: var(--danger);
+            color: white;
+        }
+
+        .btn-stop {
+            background: var(--cobalt);
+            color: white;
+        }
+
+        .btn-stop:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+
+        /* Выбор языков (Оригинал и Перевод) */
+        .lang-section {
+            margin-top: 1.25rem;
+        }
+
+        .lang-title {
+            font-weight: 700;
+            font-size: 0.95rem;
+            color: var(--cobalt-dark);
+            margin-bottom: 0.5rem;
+        }
+
+        .lang-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 0.6rem;
+            margin-bottom: 1rem;
+        }
+
+        .lang-card {
+            padding: 0.65rem;
+            background: rgba(255, 255, 255, 0.7);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            text-align: center;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.9rem;
+            transition: all 0.2s;
+        }
+
+        .lang-card.selected {
+            background: var(--cobalt);
+            border-color: var(--cobalt);
+            color: white;
+            box-shadow: 0 4px 12px rgba(0, 71, 171, 0.25);
+        }
+
+        .lang-card span {
+            font-size: 1.3rem;
+            display: block;
+            margin-bottom: 0.15rem;
+        }
+
+        .btn-submit {
+            width: 100%;
+            padding: 1rem;
+            background: linear-gradient(135deg, #0047AB, #002D6E);
+            color: var(--sand);
+            border: none;
+            border-radius: 10px;
+            font-size: 1.1rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.25s;
+            box-shadow: 0 4px 20px rgba(0, 71, 171, 0.25);
+            margin-top: 1rem;
+        }
+
+        .btn-submit:hover {
+            transform: translateY(-1px);
+        }
+
+        .btn-submit:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .status-box {
+            display: none;
+            margin-top: 1.5rem;
+            text-align: center;
+        }
+
+        .spinner {
+            width: 38px;
+            height: 38px;
+            border: 3px solid rgba(0, 71, 171, 0.2);
+            border-top-color: var(--cobalt);
+            border-radius: 50%;
+            animation: spin 1s infinite linear;
+            margin: 0 auto 0.75rem;
+        }
+
+        @keyframes spin {
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        .results-box {
+            display: none;
+            margin-top: 1.5rem;
+        }
+
+        .video-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.25rem;
+            margin-top: 1.25rem;
+        }
+
+        @media (max-width: 768px) {
+            .video-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .video-col {
+            background: rgba(255, 255, 255, 0.9);
+            padding: 1rem;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+        }
+
+        video {
+            width: 100%;
+            max-height: 360px;
+            border-radius: 8px;
+            background: #000;
+            display: block;
+        }
+
+        .info-pill {
+            background: rgba(0, 71, 171, 0.08);
+            color: var(--cobalt-dark);
+            padding: 0.45rem 0.9rem;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            display: inline-block;
+            margin-right: 0.5rem;
+            margin-bottom: 0.5rem;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <header>
+            <h1>AI Video Dubbing Studio</h1>
+            <p>Синхронизированный дубляж видео с сохранением фоновых звуков и эффектов</p>
+        </header>
+
+        <div class="card">
+            <div class="tabs">
+                <button class="tab-btn active" id="tab-upload-btn" onclick="switchTab('upload')">📁 Загрузить
+                    файл</button>
+                <button class="tab-btn" id="tab-record-btn" onclick="switchTab('record')">🎥 Студия записи с
+                    камеры</button>
+            </div>
+
+            <div id="upload-section">
+                <div class="dropzone" onclick="document.getElementById('video-file-input').click()">
+                    <p id="file-label" style="font-size: 1.05rem; font-weight: 700; color: var(--cobalt-dark);">Нажмите
+                        для выбора видео или перетащите файл сюда</p>
+                    <p style="color: var(--text-muted); font-size: 0.85rem; margin-top: 0.4rem;">Поддерживаются .MP4,
+                        .MOV, .AVI, .WEBM</p>
+                    <input type="file" id="video-file-input" accept="video/*" style="display: none"
+                        onchange="handleFileSelect(this)">
+                </div>
+            </div>
+
+            <div id="record-section" class="studio-grid">
+                <div class="camera-box">
+                    <video id="webcam-preview" autoplay muted playsinline></video>
+                    <div class="rec-badge" id="rec-badge"><span>●</span> REC</div>
+                </div>
+
+                <div class="telemetry-box">
+                    <div>
+                        <p
+                            style="font-size: 0.85rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">
+                            Хронометраж:</p>
+                        <div class="timer-display" id="timer-display">00:00.0</div>
+
+                        <div class="vu-container">
+                            <div class="vu-label">
+                                <span>🎙️ Уровень микрофона:</span>
+                                <span id="vu-status" style="color: var(--text-muted);">Тишина</span>
+                            </div>
+                            <div class="vu-bar-bg">
+                                <div class="vu-bar-fill" id="vu-bar"></div>
+                            </div>
+                        </div>
+
+                        <p id="rec-status-info" style="font-size: 0.85rem; color: var(--cobalt); font-weight: 600;">
+                            Камера готова к работе.
+                        </p>
+                    </div>
+
+                    <div style="display: flex; flex-direction: column; gap: 0.5rem; margin-top: 1rem;">
+                        <button class="btn-rec btn-start" id="start-rec-btn" onclick="startRecording()"><span>🔴</span>
+                            Начать запись</button>
+                        <button class="btn-rec btn-stop" id="stop-rec-btn" onclick="stopRecording()"
+                            disabled><span>⏹️</span> Завершить</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="lang-section">
+                <p class="lang-title">1. Язык оригинала в видео:</p>
+                <div class="lang-grid" id="src-lang-grid">
+                    <div class="lang-card selected" onclick="selectSourceLang('auto', this)"><span>🤖</span>Авто</div>
+                    <div class="lang-card" onclick="selectSourceLang('en', this)"><span>🇬🇧</span>Английский</div>
+                    <div class="lang-card" onclick="selectSourceLang('ru', this)"><span>🇷🇺</span>Русский</div>
+                    <div class="lang-card" onclick="selectSourceLang('es', this)"><span>🇪🇸</span>Испанский</div>
+                    <div class="lang-card" onclick="selectSourceLang('de', this)"><span>🇩🇪</span>Немецкий</div>
+                </div>
+            </div>
+
+            <div class="lang-section">
+                <p class="lang-title">2. Перевести и озвучить на:</p>
+                <div class="lang-grid" id="tgt-lang-grid">
+                    <div class="lang-card selected" onclick="selectTargetLang('ru', this)"><span>🇷🇺</span>Русский
+                    </div>
+                    <div class="lang-card" onclick="selectTargetLang('en', this)"><span>🇬🇧</span>Английский</div>
+                    <div class="lang-card" onclick="selectTargetLang('es', this)"><span>🇪🇸</span>Испанский</div>
+                    <div class="lang-card" onclick="selectTargetLang('de', this)"><span>🇩🇪</span>Немецкий</div>
+                    <div class="lang-card" onclick="selectTargetLang('fr', this)"><span>🇫🇷</span>Французский</div>
+                </div>
+            </div>
+
+            <button class="btn-submit" id="submit-btn" onclick="processDubbing()">🚀 Переозвучить видео</button>
+
+            <div class="status-box" id="status-box">
+                <div class="spinner"></div>
+                <p id="status-text" style="font-weight: 700; color: var(--cobalt);">Синхронизация и дубляж
+                    нейросетями...</p>
+                <p style="color: var(--text-muted); font-size: 0.85rem; margin-top: 0.25rem;">(Анализ тембра → Whisper →
+                    Перевод → Нейро-актер → Сведение звука)</p>
+            </div>
+        </div>
+
+        <div class="card results-box" id="results-box">
+            <h2 style="font-size: 1.3rem; margin-bottom: 0.75rem; color: var(--cobalt-dark);">🎉 Результат дубляжа</h2>
+            <div id="metrics-container" style="margin-bottom: 1rem;"></div>
+
+            <div class="video-grid">
+                <div class="video-col">
+                    <p style="font-weight: 700; margin-bottom: 0.5rem; color: var(--cobalt-dark);">🎬 Оригинал:</p>
+                    <video id="original-video-player" controls></video>
+                    <p id="orig-text-display" style="margin-top: 0.75rem; font-size: 0.9rem; color: var(--text-muted);">
+                    </p>
+                </div>
+                <div class="video-col">
+                    <p style="font-weight: 700; margin-bottom: 0.5rem; color: var(--cobalt);">🔊 Дубляж (Нейро-голос):
+                    </p>
+                    <video id="dubbed-video-player" controls></video>
+                    <p id="trans-text-display"
+                        style="margin-top: 0.75rem; font-size: 0.9rem; color: var(--cobalt); font-weight: 700;"></p>
+                </div>
+            </div>
+
+            <a id="download-btn" href="#" download class="btn-submit"
+                style="display: block; text-align: center; text-decoration: none; margin-top: 1.25rem; background: linear-gradient(135deg, #059669, #10b981); color: white;">
+                ⬇️ Скачать готовое видео
+            </a>
+        </div>
+    </div>
+
+    <script>
+        let selectedFile = null;
+        let selectedSourceLang = 'auto';
+        let selectedTargetLang = 'ru';
+
+        let mediaRecorder = null;
+        let recordedChunks = [];
+        let stream = null;
+        let audioContext = null;
+        let analyser = null;
+        let microphoneNode = null;
+        let animFrameId = null;
+        let startTime = 0;
+        let timerInterval = null;
+
+        function switchTab(tab) {
+            document.getElementById('tab-upload-btn').classList.toggle('active', tab === 'upload');
+            document.getElementById('tab-record-btn').classList.toggle('active', tab === 'record');
+            document.getElementById('upload-section').style.display = tab === 'upload' ? 'block' : 'none';
+            document.getElementById('record-section').style.display = tab === 'record' ? 'grid' : 'none';
+
+            if (tab === 'record') { initStudio(); } else { stopStudio(); }
+        }
+
+        async function initStudio() {
+            try {
+                stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+                document.getElementById('webcam-preview').srcObject = stream;
+
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                analyser = audioContext.createAnalyser();
+                analyser.fftSize = 256;
+                microphoneNode = audioContext.createMediaStreamSource(stream);
+                microphoneNode.connect(analyser);
+
+                updateVUMeter();
+                document.getElementById('rec-status-info').innerText = "Камера и микрофон активны!";
+            } catch (e) {
+                alert('Доступ к камере/микрофону отклонен: ' + e);
+            }
+        }
+
+        function updateVUMeter() {
+            if (!analyser) return;
+            const dataArray = new Uint8Array(analyser.frequencyBinCount);
+            analyser.getByteFrequencyData(dataArray);
+
+            let sum = 0;
+            for (let i = 0; i < dataArray.length; i++) { sum += dataArray[i]; }
+            let average = sum / dataArray.length;
+            let percentage = Math.min(100, Math.round((average / 128) * 100));
+
+            const bar = document.getElementById('vu-bar');
+            const status = document.getElementById('vu-status');
+            if (bar) bar.style.width = percentage + '%';
+
+            if (status) {
+                if (percentage > 15) {
+                    status.innerText = "Голос слышен 🟢";
+                    status.style.color = "#059669";
+                } else {
+                    status.innerText = "Тишина";
+                    status.style.color = "var(--text-muted)";
+                }
+            }
+            animFrameId = requestAnimationFrame(updateVUMeter);
+        }
+
+        function stopStudio() {
+            if (stream) { stream.getTracks().forEach(t => t.stop()); stream = null; }
+            if (audioContext) { audioContext.close(); audioContext = null; }
+            if (animFrameId) { cancelAnimationFrame(animFrameId); }
+            clearInterval(timerInterval);
+        }
+
+        function startRecording() {
+            recordedChunks = [];
+            mediaRecorder = new MediaRecorder(stream, { mimeType: 'video/webm' });
+            mediaRecorder.ondataavailable = e => { if (e.data.size > 0) recordedChunks.push(e.data); };
+            mediaRecorder.onstop = () => {
+                selectedFile = new File(recordedChunks, "studio_recording.webm", { type: "video/webm" });
+                document.getElementById('rec-status-info').innerText = `Запись готова: ${(selectedFile.size / 1024).toFixed(1)} КБ`;
+            };
+
+            mediaRecorder.start(100);
+            startTime = Date.now();
+            document.getElementById('rec-badge').style.display = 'flex';
+            document.getElementById('start-rec-btn').disabled = true;
+            document.getElementById('stop-rec-btn').disabled = false;
+
+            timerInterval = setInterval(() => {
+                let elapsed = Date.now() - startTime;
+                let sec = Math.floor(elapsed / 1000);
+                let ms = Math.floor((elapsed % 1000) / 100);
+                let mins = Math.floor(sec / 60);
+                let formattedSec = (sec % 60).toString().padStart(2, '0');
+                document.getElementById('timer-display').innerText = `${mins.toString().padStart(2, '0')}:${formattedSec}.${ms}`;
+            }, 100);
+        }
+
+        function stopRecording() {
+            mediaRecorder.stop();
+            clearInterval(timerInterval);
+            document.getElementById('rec-badge').style.display = 'none';
+            document.getElementById('start-rec-btn').disabled = false;
+            document.getElementById('stop-rec-btn').disabled = true;
+        }
+
+        function handleFileSelect(input) {
+            if (input.files && input.files[0]) {
+                selectedFile = input.files[0];
+                document.getElementById('file-label').innerText = `Файл: ${selectedFile.name} (${(selectedFile.size / (1024 * 1024)).toFixed(2)} МБ)`;
+            }
+        }
+
+        function selectSourceLang(lang, el) {
+            selectedSourceLang = lang;
+            document.querySelectorAll('#src-lang-grid .lang-card').forEach(c => c.classList.remove('selected'));
+            el.classList.add('selected');
+        }
+
+        function selectTargetLang(lang, el) {
+            selectedTargetLang = lang;
+            document.querySelectorAll('#tgt-lang-grid .lang-card').forEach(c => c.classList.remove('selected'));
+            el.classList.add('selected');
+        }
+
+        async function processDubbing() {
+            if (!selectedFile) { alert('Пожалуйста, выберите видео или запишите с камеры!'); return; }
+
+            const submitBtn = document.getElementById('submit-btn');
+            const statusBox = document.getElementById('status-box');
+            const resultsBox = document.getElementById('results-box');
+
+            submitBtn.disabled = true;
+            statusBox.style.display = 'block';
+            resultsBox.style.display = 'none';
+
+            const formData = new FormData();
+            formData.append('file', selectedFile);
+            formData.append('source_language', selectedSourceLang);
+            formData.append('target_language', selectedTargetLang);
+
+            try {
+                const response = await fetch('/dub', { method: 'POST', body: formData });
+                const data = await response.json();
+
+                if (!response.ok) { throw new Error(data.detail || 'Ошибка сервера'); }
+
+                document.getElementById('original-video-player').src = URL.createObjectURL(selectedFile);
+                document.getElementById('dubbed-video-player').src = data.download_url;
+                document.getElementById('download-btn').href = data.download_url;
+
+                document.getElementById('orig-text-display').innerText = `Оригинал (${data.original_language.toUpperCase()}): "${data.original_text}"`;
+                document.getElementById('trans-text-display').innerText = `Дубляж (${data.target_language.toUpperCase()}): "${data.translated_text}"`;
+
+                document.getElementById('metrics-container').innerHTML = `
+                <span class="info-pill">⏱️ Время: ${data.elapsed_time_sec} сек</span>
+                <span class="info-pill">🎙️ Спикер: ${data.speaker_profile.voice_description}</span>
+                <span class="info-pill">🧠 VAD Голос: ${Math.round(data.vad_metrics.speech_ratio * 100)}%</span>
+            `;
+
+                resultsBox.style.display = 'block';
+            } catch (err) {
+                alert('Ошибка переозвучки: ' + err.message);
+            } finally {
+                submitBtn.disabled = false;
+                statusBox.style.display = 'none';
+            }
+        }
+    </script>
+</body>
+
+</html>

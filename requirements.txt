@@ -1,0 +1,11 @@
+fastapi>=0.100.0
+uvicorn>=0.23.0
+jinja2>=3.1.2
+python-multipart>=0.0.6
+torch>=2.0.0 --index-url https://download.pytorch.org/whl/cpu
+openai-whisper>=20231117
+moviepy<2.0.0
+deep-translator>=1.11.4
+edge-tts>=6.1.9
+numpy>=1.24.0
+static-ffmpeg>=2.5

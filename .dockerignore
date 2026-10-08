@@ -1,0 +1,17 @@
+venv/
+__pycache__/
+*.pyc
+.git/
+.gitignore
+.pytest_cache/
+tests/
+storage/raw_videos/*
+storage/dubbed_videos/*
+storage/temp/*
+!storage/raw_videos/.gitkeep
+!storage/dubbed_videos/.gitkeep
+!storage/temp/.gitkeep
+*.mp4
+*.webm
+*.wav
+*.mp3

@@ -1,0 +1,14 @@
+version: '3.8'
+
+services:
+  ai-dubbing-studio:
+    build: .
+    container_name: ai_dubbing_studio
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./storage:/app/storage
+      - ./models:/app/models
+    environment:
+      - PYTHONUNBUFFERED=1
+    restart: unless-stopped

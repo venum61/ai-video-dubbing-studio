@@ -52,6 +52,9 @@ def transcribe_audio(
     )
 
     detected_lang = result.get("language", source_language if source_language != "auto" else "en")
+    if detected_lang in ["haw", "jw", "la", "sn", "su"]:
+        logger.warning(f"Whisper ошибся языком ({detected_lang}). Принудительно выставляем русский.")
+        detected_lang = "ru"
     logger.info(f"Язык транскрибации: {detected_lang.upper()}")
 
     clean_segments = []

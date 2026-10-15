@@ -244,7 +244,7 @@
             cursor: not-allowed;
         }
 
-        /* Выбор языков (Оригинал и Перевод) */
+        /* Языки */
         .lang-section {
             margin-top: 1.25rem;
         }
@@ -313,26 +313,10 @@
             transform: none;
         }
 
+        /* ЖИВОЙ ПРОГРЕСС-БАР */
         .status-box {
             display: none;
             margin-top: 1.5rem;
-            text-align: center;
-        }
-
-        .spinner {
-            width: 38px;
-            height: 38px;
-            border: 3px solid rgba(0, 71, 171, 0.2);
-            border-top-color: var(--cobalt);
-            border-radius: 50%;
-            animation: spin 1s infinite linear;
-            margin: 0 auto 0.75rem;
-        }
-
-        @keyframes spin {
-            100% {
-                transform: rotate(360deg);
-            }
         }
 
         .results-box {
@@ -445,6 +429,7 @@
                 </div>
             </div>
 
+            <!-- Выбор языков -->
             <div class="lang-section">
                 <p class="lang-title">1. Язык оригинала в видео:</p>
                 <div class="lang-grid" id="src-lang-grid">
@@ -470,15 +455,26 @@
 
             <button class="btn-submit" id="submit-btn" onclick="processDubbing()">🚀 Переозвучить видео</button>
 
+            <!-- ЖИВОЙ ПРОГРЕСС-БАР -->
             <div class="status-box" id="status-box">
-                <div class="spinner"></div>
-                <p id="status-text" style="font-weight: 700; color: var(--cobalt);">Синхронизация и дубляж
-                    нейросетями...</p>
-                <p style="color: var(--text-muted); font-size: 0.85rem; margin-top: 0.25rem;">(Анализ тембра → Whisper →
-                    Перевод → Нейро-актер → Сведение звука)</p>
+                <div
+                    style="display: flex; justify-content: space-between; font-weight: 700; margin-bottom: 0.5rem; font-size: 0.95rem;">
+                    <span id="status-step-text" style="color: var(--cobalt);">Подготовка к обработке...</span>
+                    <span id="status-percent-text" style="color: var(--cobalt-dark);">0%</span>
+                </div>
+
+                <div
+                    style="width: 100%; height: 14px; background: rgba(0, 71, 171, 0.12); border-radius: 7px; overflow: hidden; border: 1px solid var(--border);">
+                    <div id="progress-bar-fill"
+                        style="width: 0%; height: 100%; background: linear-gradient(90deg, #0047AB, #10b981); border-radius: 7px; transition: width 0.35s ease;">
+                    </div>
+                </div>
+                <p style="color: var(--text-muted); font-size: 0.85rem; margin-top: 0.5rem;">(Нейросети обрабатывают
+                    аудиопотоки без блокировки сервера)</p>
             </div>
         </div>
 
+        <!-- Результаты -->
         <div class="card results-box" id="results-box">
             <h2 style="font-size: 1.3rem; margin-bottom: 0.75rem; color: var(--cobalt-dark);">🎉 Результат дубляжа</h2>
             <div id="metrics-container" style="margin-bottom: 1rem;"></div>
@@ -639,21 +635,49 @@
             const submitBtn = document.getElementById('submit-btn');
             const statusBox = document.getElementById('status-box');
             const resultsBox = document.getElementById('results-box');
+            const progressFill = document.getElementById('progress-bar-fill');
+            const stepText = document.getElementById('status-step-text');
+            const percentText = document.getElementById('status-percent-text');
 
             submitBtn.disabled = true;
             statusBox.style.display = 'block';
             resultsBox.style.display = 'none';
+            progressFill.style.width = '5%';
+            percentText.innerText = '5%';
+            stepText.innerText = 'Отправка видео на сервер...';
+
+            const taskId = 'task_' + Math.random().toString(36).substring(2, 11);
 
             const formData = new FormData();
             formData.append('file', selectedFile);
             formData.append('source_language', selectedSourceLang);
             formData.append('target_language', selectedTargetLang);
+            formData.append('task_id', taskId);
+
+            // Опрос статуса каждые 400 мс
+            const progressTimer = setInterval(async () => {
+                try {
+                    const res = await fetch(`/progress/${taskId}`);
+                    if (res.ok) {
+                        const progData = await res.json();
+                        progressFill.style.width = progData.percent + '%';
+                        percentText.innerText = progData.percent + '%';
+                        stepText.innerText = progData.message;
+                    }
+                } catch (e) { }
+            }, 400);
 
             try {
                 const response = await fetch('/dub', { method: 'POST', body: formData });
                 const data = await response.json();
 
+                clearInterval(progressTimer);
+
                 if (!response.ok) { throw new Error(data.detail || 'Ошибка сервера'); }
+
+                progressFill.style.width = '100%';
+                percentText.innerText = '100%';
+                stepText.innerText = 'Дубляж успешно завершен!';
 
                 document.getElementById('original-video-player').src = URL.createObjectURL(selectedFile);
                 document.getElementById('dubbed-video-player').src = data.download_url;
@@ -670,6 +694,7 @@
 
                 resultsBox.style.display = 'block';
             } catch (err) {
+                clearInterval(progressTimer);
                 alert('Ошибка переозвучки: ' + err.message);
             } finally {
                 submitBtn.disabled = false;
